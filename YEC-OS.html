@@ -115,7 +115,6 @@
                         </div>
                     </div>
 
-                    <!-- Process Table -->
                     <div id="processTable">
                         <h3 class="text-lg font-medium text-gray-700 mb-3">Process Metrics</h3>
                         <div class="overflow-x-auto">
@@ -437,7 +436,7 @@
                         completed.push(shortest);
                     }
 
-                    // Merge consecutive time slots for same process
+                    
                     if (this.ganttChart.length > 0 && 
                         this.ganttChart[this.ganttChart.length - 1].processId === shortest.id &&
                         this.ganttChart[this.ganttChart.length - 1].endTime === startTime) {
@@ -497,7 +496,7 @@
                     current.remainingTime -= executeTime;
                     currentTime += executeTime;
 
-                    // Add newly arrived processes
+                   
                     processes.forEach(p => {
                         if (p.arrivalTime <= currentTime && !queue.includes(p) && 
                             !completed.includes(p) && p !== current) {
@@ -536,7 +535,7 @@
                 });
 
                 while (completed.length < processes.length) {
-                    // Add newly arrived processes to queue1
+                   
                     processes.forEach(p => {
                         if (p.arrivalTime === currentTime && !queue1.includes(p) && 
                             !queue2.includes(p) && !queue3.includes(p) && !completed.includes(p)) {
@@ -645,7 +644,7 @@
 
                 container.appendChild(ganttDiv);
 
-                // Add time scale
+            
                 const timeScale = document.createElement('div');
                 timeScale.className = 'flex justify-between text-xs text-gray-500 mt-2 px-1';
                 for (let i = 0; i <= maxTime; i += Math.max(1, Math.floor(maxTime / 10))) {
@@ -687,7 +686,7 @@
             }
         }
 
-        // Initialize the scheduler when the page loads
+      
         document.addEventListener('DOMContentLoaded', () => {
             new CPUScheduler();
         });
