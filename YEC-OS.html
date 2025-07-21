@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Scheduling Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gantt-process {
+            transition: all 0.3s ease;
+        }
+        .gantt-process:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .process-colors {
+            --p1: #3B82F6; --p2: #EF4444; --p3: #10B981; --p4: #F59E0B; --p5: #8B5CF6;
+            --p6: #EC4899; --p7: #06B6D4; --p8: #84CC16; --p9: #F97316; --p10: #6366F1;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">CPU Scheduling Simulator</h1>
+            <p class="text-gray-600">Visualize and analyze different CPU scheduling algorithms</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Input Panel -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Configuration</h2>
+                    
+                    <!-- Algorithm Selection -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Scheduling Algorithm</label>
+                        <select id="algorithm" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="fcfs">First-Come First-Served (FCFS)</option>
+                            <option value="sjf">Shortest Job First (SJF)</option>
+                            <option value="srtf">Shortest Remaining Time First (SRTF)</option>
+                            <option value="rr">Round Robin (RR)</option>
+                            <option value="mlfq">Multilevel Feedback Queue (MLFQ)</option>
+                        </select>
+                    </div>
+
+                    <!-- Time Quantum Settings -->
+                    <div id="quantumSettings" class="mb-6 hidden">
+                        <div id="rrQuantum" class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Time Quantum</label>
+                            <input type="number" id="timeQuantum" value="2" min="1" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div id="mlfqSettings" class="hidden space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Level 1 Time Quantum</label>
+                                <input type="number" id="mlfqQ1" value="2" min="1" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Level 2 Time Quantum</label>
+                                <input type="number" id="mlfqQ2" value="4" min="1" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Level 1 Allotment</label>
+                                <input type="number" id="mlfqAllot1" value="5" min="1" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Process Input Method -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Input Method</label>
+                        <div class="flex space-x-4">
+                            <button id="manualBtn" class="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Manual</button>
+                            <button id="randomBtn" class="flex-1 py-2 px-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">Random</button>
+                        </div>
+                    </div>
+
+                    <!-- Random Generator -->
+                    <div id="randomGenerator" class="mb-6 hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Number of Processes</label>
+                        <input type="number" id="numProcesses" value="5" min="1" max="10" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-3">
+                        <button id="generateBtn" class="w-full py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">Generate Random Processes</button>
+                    </div>
+
+                    <!-- Manual Process Input -->
+                    <div id="manualInput">
+                        <div class="flex justify-between items-center mb-3">
+                            <label class="text-sm font-medium text-gray-700">Processes</label>
+                            <button id="addProcessBtn" class="py-1 px-3 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">Add Process</button>
+                        </div>
+                        <div id="processInputs" class="space-y-3 mb-4">
+                            <!-- Process inputs will be added here -->
+                        </div>
+                    </div>
+
+                    <!-- Simulate Button -->
+                    <button id="simulateBtn" class="w-full py-3 px-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+                        Run Simulation
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Simulation Results</h2>
+                    
+                    <!-- Gantt Chart -->
+                    <div id="ganttChart" class="mb-8">
+                        <h3 class="text-lg font-medium text-gray-700 mb-3">Gantt Chart</h3>
+                        <div id="ganttContainer" class="bg-gray-50 rounded-lg p-4 min-h-24 flex items-center justify-center text-gray-500">
+                            Run a simulation to see the Gantt chart
+                        </div>
+                    </div>
+
+                    <!-- Process Table -->
+                    <div id="processTable">
+                        <h3 class="text-lg font-medium text-gray-700 mb-3">Process Metrics</h3>
+                        <div class="overflow-x-auto">
+                            <table id="resultsTable" class="w-full border-collapse border border-gray-300 rounded-lg overflow-hidden">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">Process ID</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">Arrival Time</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">Burst Time</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">Completion Time</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">Turnaround Time</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left">Response Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBody">
+                                    <tr>
+                                        <td colspan="6" class="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                                            No simulation results yet
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Average Metrics -->
+                    <div id="averageMetrics" class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 hidden">
+                        <div class="bg-blue-50 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-blue-600" id="avgTurnaround">0</div>
+                            <div class="text-sm text-gray-600">Avg Turnaround Time</div>
+                        </div>
+                        <div class="bg-green-50 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-green-600" id="avgWaiting">0</div>
+                            <div class="text-sm text-gray-600">Avg Waiting Time</div>
+                        </div>
+                        <div class="bg-purple-50 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-purple-600" id="avgResponse">0</div>
+                            <div class="text-sm text-gray-600">Avg Response Time</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CPUScheduler {
+            constructor() {
+                this.processes = [];
+                this.ganttChart = [];
+                this.results = [];
+                this.initializeEventListeners();
+                this.addInitialProcessInputs();
+            }
+
+            initializeEventListeners() {
+                document.getElementById('algorithm').addEventListener('change', this.handleAlgorithmChange.bind(this));
+                document.getElementById('manualBtn').addEventListener('click', () => this.setInputMethod('manual'));
+                document.getElementById('randomBtn').addEventListener('click', () => this.setInputMethod('random'));
+                document.getElementById('addProcessBtn').addEventListener('click', this.addProcessInput.bind(this));
+                document.getElementById('generateBtn').addEventListener('click', this.generateRandomProcesses.bind(this));
+                document.getElementById('simulateBtn').addEventListener('click', this.runSimulation.bind(this));
+            }
+
+            handleAlgorithmChange() {
+                const algorithm = document.getElementById('algorithm').value;
+                const quantumSettings = document.getElementById('quantumSettings');
+                const rrQuantum = document.getElementById('rrQuantum');
+                const mlfqSettings = document.getElementById('mlfqSettings');
+
+                if (algorithm === 'rr') {
+                    quantumSettings.classList.remove('hidden');
+                    rrQuantum.classList.remove('hidden');
+                    mlfqSettings.classList.add('hidden');
+                } else if (algorithm === 'mlfq') {
+                    quantumSettings.classList.remove('hidden');
+                    rrQuantum.classList.add('hidden');
+                    mlfqSettings.classList.remove('hidden');
+                } else {
+                    quantumSettings.classList.add('hidden');
+                }
+            }
+
+            setInputMethod(method) {
+                const manualBtn = document.getElementById('manualBtn');
+                const randomBtn = document.getElementById('randomBtn');
+                const manualInput = document.getElementById('manualInput');
+                const randomGenerator = document.getElementById('randomGenerator');
+
+                if (method === 'manual') {
+                    manualBtn.className = 'flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors';
+                    randomBtn.className = 'flex-1 py-2 px-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors';
+                    manualInput.classList.remove('hidden');
+                    randomGenerator.classList.add('hidden');
+                } else {
+                    randomBtn.className = 'flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors';
+                    manualBtn.className = 'flex-1 py-2 px-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors';
+                    randomGenerator.classList.remove('hidden');
+                    manualInput.classList.add('hidden');
+                }
+            }
+
+            addInitialProcessInputs() {
+                for (let i = 0; i < 3; i++) {
+                    this.addProcessInput();
+                }
+            }
+
+            addProcessInput() {
+                const container = document.getElementById('processInputs');
+                const processCount = container.children.length + 1;
+                
+                const processDiv = document.createElement('div');
+                processDiv.className = 'bg-gray-50 rounded-lg p-3';
+                processDiv.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-gray-700">Process P${processCount}</span>
+                        <button onclick="this.parentElement.parentElement.remove()" class="text-red-500 hover:text-red-700 text-sm">Remove</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Arrival Time</label>
+                            <input type="number" class="arrival-time w-full p-2 border border-gray-300 rounded text-sm" value="0" min="0">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Burst Time</label>
+                            <input type="number" class="burst-time w-full p-2 border border-gray-300 rounded text-sm" value="1" min="1">
+                        </div>
+                    </div>
+                `;
+                container.appendChild(processDiv);
+            }
+
+            generateRandomProcesses() {
+                const numProcesses = parseInt(document.getElementById('numProcesses').value);
+                const container = document.getElementById('processInputs');
+                container.innerHTML = '';
+
+                for (let i = 1; i <= numProcesses; i++) {
+                    const arrivalTime = Math.floor(Math.random() * 10);
+                    const burstTime = Math.floor(Math.random() * 10) + 1;
+                    
+                    const processDiv = document.createElement('div');
+                    processDiv.className = 'bg-gray-50 rounded-lg p-3';
+                    processDiv.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium text-gray-700">Process P${i}</span>
+                            <button onclick="this.parentElement.parentElement.remove()" class="text-red-500 hover:text-red-700 text-sm">Remove</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">Arrival Time</label>
+                                <input type="number" class="arrival-time w-full p-2 border border-gray-300 rounded text-sm" value="${arrivalTime}" min="0">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">Burst Time</label>
+                                <input type="number" class="burst-time w-full p-2 border border-gray-300 rounded text-sm" value="${burstTime}" min="1">
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(processDiv);
+                }
+
+                this.setInputMethod('manual');
+            }
+
+            collectProcesses() {
+                const processInputs = document.getElementById('processInputs').children;
+                this.processes = [];
+
+                for (let i = 0; i < processInputs.length; i++) {
+                    const arrivalTime = parseInt(processInputs[i].querySelector('.arrival-time').value);
+                    const burstTime = parseInt(processInputs[i].querySelector('.burst-time').value);
+                    
+                    this.processes.push({
+                        id: `P${i + 1}`,
+                        arrivalTime,
+                        burstTime,
+                        remainingTime: burstTime,
+                        completionTime: 0,
+                        turnaroundTime: 0,
+                        responseTime: -1,
+                        waitingTime: 0,
+                        level: 1 // For MLFQ
+                    });
+                }
+            }
+
+            runSimulation() {
+                this.collectProcesses();
+                if (this.processes.length === 0) {
+                    alert('Please add at least one process');
+                    return;
+                }
+
+                const algorithm = document.getElementById('algorithm').value;
+                this.ganttChart = [];
+                this.results = [];
+
+                switch (algorithm) {
+                    case 'fcfs':
+                        this.fcfsScheduling();
+                        break;
+                    case 'sjf':
+                        this.sjfScheduling();
+                        break;
+                    case 'srtf':
+                        this.srtfScheduling();
+                        break;
+                    case 'rr':
+                        this.roundRobinScheduling();
+                        break;
+                    case 'mlfq':
+                        this.mlfqScheduling();
+                        break;
+                }
+
+                this.displayResults();
+            }
+
+            fcfsScheduling() {
+                const processes = [...this.processes].sort((a, b) => a.arrivalTime - b.arrivalTime);
+                let currentTime = 0;
+
+                processes.forEach(process => {
+                    if (currentTime < process.arrivalTime) {
+                        currentTime = process.arrivalTime;
+                    }
+
+                    if (process.responseTime === -1) {
+                        process.responseTime = currentTime - process.arrivalTime;
+                    }
+
+                    this.ganttChart.push({
+                        processId: process.id,
+                        startTime: currentTime,
+                        endTime: currentTime + process.burstTime
+                    });
+
+                    currentTime += process.burstTime;
+                    process.completionTime = currentTime;
+                    process.turnaroundTime = process.completionTime - process.arrivalTime;
+                    process.waitingTime = process.turnaroundTime - process.burstTime;
+                });
+
+                this.results = processes;
+            }
+
+            sjfScheduling() {
+                const processes = [...this.processes];
+                let currentTime = 0;
+                const completed = [];
+
+                while (completed.length < processes.length) {
+                    const available = processes.filter(p => 
+                        p.arrivalTime <= currentTime && !completed.includes(p)
+                    );
+
+                    if (available.length === 0) {
+                        currentTime++;
+                        continue;
+                    }
+
+                    const shortest = available.reduce((min, p) => 
+                        p.burstTime < min.burstTime ? p : min
+                    );
+
+                    if (shortest.responseTime === -1) {
+                        shortest.responseTime = currentTime - shortest.arrivalTime;
+                    }
+
+                    this.ganttChart.push({
+                        processId: shortest.id,
+                        startTime: currentTime,
+                        endTime: currentTime + shortest.burstTime
+                    });
+
+                    currentTime += shortest.burstTime;
+                    shortest.completionTime = currentTime;
+                    shortest.turnaroundTime = shortest.completionTime - shortest.arrivalTime;
+                    shortest.waitingTime = shortest.turnaroundTime - shortest.burstTime;
+                    completed.push(shortest);
+                }
+
+                this.results = processes;
+            }
+
+            srtfScheduling() {
+                const processes = [...this.processes];
+                let currentTime = 0;
+                const completed = [];
+
+                while (completed.length < processes.length) {
+                    const available = processes.filter(p => 
+                        p.arrivalTime <= currentTime && !completed.includes(p)
+                    );
+
+                    if (available.length === 0) {
+                        currentTime++;
+                        continue;
+                    }
+
+                    const shortest = available.reduce((min, p) => 
+                        p.remainingTime < min.remainingTime ? p : min
+                    );
+
+                    if (shortest.responseTime === -1) {
+                        shortest.responseTime = currentTime - shortest.arrivalTime;
+                    }
+
+                    const startTime = currentTime;
+                    shortest.remainingTime--;
+                    currentTime++;
+
+                    if (shortest.remainingTime === 0) {
+                        shortest.completionTime = currentTime;
+                        shortest.turnaroundTime = shortest.completionTime - shortest.arrivalTime;
+                        shortest.waitingTime = shortest.turnaroundTime - shortest.burstTime;
+                        completed.push(shortest);
+                    }
+
+                    // Merge consecutive time slots for same process
+                    if (this.ganttChart.length > 0 && 
+                        this.ganttChart[this.ganttChart.length - 1].processId === shortest.id &&
+                        this.ganttChart[this.ganttChart.length - 1].endTime === startTime) {
+                        this.ganttChart[this.ganttChart.length - 1].endTime = currentTime;
+                    } else {
+                        this.ganttChart.push({
+                            processId: shortest.id,
+                            startTime: startTime,
+                            endTime: currentTime
+                        });
+                    }
+                }
+
+                this.results = processes;
+            }
+
+            roundRobinScheduling() {
+                const quantum = parseInt(document.getElementById('timeQuantum').value);
+                const processes = [...this.processes];
+                const queue = [];
+                let currentTime = 0;
+                const completed = [];
+
+                // Add initial processes to queue
+                processes.forEach(p => {
+                    if (p.arrivalTime === 0) {
+                        queue.push(p);
+                    }
+                });
+
+                while (completed.length < processes.length) {
+                    if (queue.length === 0) {
+                        currentTime++;
+                        processes.forEach(p => {
+                            if (p.arrivalTime === currentTime && !queue.includes(p) && !completed.includes(p)) {
+                                queue.push(p);
+                            }
+                        });
+                        continue;
+                    }
+
+                    const current = queue.shift();
+                    
+                    if (current.responseTime === -1) {
+                        current.responseTime = currentTime - current.arrivalTime;
+                    }
+
+                    const executeTime = Math.min(quantum, current.remainingTime);
+                    const startTime = currentTime;
+                    
+                    this.ganttChart.push({
+                        processId: current.id,
+                        startTime: startTime,
+                        endTime: startTime + executeTime
+                    });
+
+                    current.remainingTime -= executeTime;
+                    currentTime += executeTime;
+
+                    // Add newly arrived processes
+                    processes.forEach(p => {
+                        if (p.arrivalTime <= currentTime && !queue.includes(p) && 
+                            !completed.includes(p) && p !== current) {
+                            queue.push(p);
+                        }
+                    });
+
+                    if (current.remainingTime === 0) {
+                        current.completionTime = currentTime;
+                        current.turnaroundTime = current.completionTime - current.arrivalTime;
+                        current.waitingTime = current.turnaroundTime - current.burstTime;
+                        completed.push(current);
+                    } else {
+                        queue.push(current);
+                    }
+                }
+
+                this.results = processes;
+            }
+
+            mlfqScheduling() {
+                const q1 = parseInt(document.getElementById('mlfqQ1').value);
+                const q2 = parseInt(document.getElementById('mlfqQ2').value);
+                const allot1 = parseInt(document.getElementById('mlfqAllot1').value);
+                
+                const processes = [...this.processes];
+                const queue1 = [], queue2 = [], queue3 = [];
+                let currentTime = 0;
+                const completed = [];
+
+                processes.forEach(p => {
+                    p.timeInLevel1 = 0;
+                    if (p.arrivalTime === 0) {
+                        queue1.push(p);
+                    }
+                });
+
+                while (completed.length < processes.length) {
+                    // Add newly arrived processes to queue1
+                    processes.forEach(p => {
+                        if (p.arrivalTime === currentTime && !queue1.includes(p) && 
+                            !queue2.includes(p) && !queue3.includes(p) && !completed.includes(p)) {
+                            queue1.push(p);
+                        }
+                    });
+
+                    let current = null;
+                    let quantum = 0;
+
+                    if (queue1.length > 0) {
+                        current = queue1.shift();
+                        quantum = q1;
+                    } else if (queue2.length > 0) {
+                        current = queue2.shift();
+                        quantum = q2;
+                    } else if (queue3.length > 0) {
+                        current = queue3.shift();
+                        quantum = current.remainingTime; // FCFS for level 3
+                    } else {
+                        currentTime++;
+                        continue;
+                    }
+
+                    if (current.responseTime === -1) {
+                        current.responseTime = currentTime - current.arrivalTime;
+                    }
+
+                    const executeTime = Math.min(quantum, current.remainingTime);
+                    const startTime = currentTime;
+
+                    this.ganttChart.push({
+                        processId: current.id,
+                        startTime: startTime,
+                        endTime: startTime + executeTime
+                    });
+
+                    current.remainingTime -= executeTime;
+                    currentTime += executeTime;
+
+                    if (current.level === 1) {
+                        current.timeInLevel1 += executeTime;
+                    }
+
+                    if (current.remainingTime === 0) {
+                        current.completionTime = currentTime;
+                        current.turnaroundTime = current.completionTime - current.arrivalTime;
+                        current.waitingTime = current.turnaroundTime - current.burstTime;
+                        completed.push(current);
+                    } else {
+                        // Demote process if necessary
+                        if (current.level === 1 && current.timeInLevel1 >= allot1) {
+                            current.level = 2;
+                            queue2.push(current);
+                        } else if (current.level === 1) {
+                            queue1.push(current);
+                        } else if (current.level === 2 && executeTime === q2) {
+                            current.level = 3;
+                            queue3.push(current);
+                        } else if (current.level === 2) {
+                            queue2.push(current);
+                        } else {
+                            queue3.push(current);
+                        }
+                    }
+                }
+
+                this.results = processes;
+            }
+
+            displayResults() {
+                this.displayGanttChart();
+                this.displayProcessTable();
+                this.displayAverageMetrics();
+            }
+
+            displayGanttChart() {
+                const container = document.getElementById('ganttContainer');
+                container.innerHTML = '';
+
+                if (this.ganttChart.length === 0) return;
+
+                const maxTime = Math.max(...this.ganttChart.map(g => g.endTime));
+                const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1'];
+
+                const ganttDiv = document.createElement('div');
+                ganttDiv.className = 'flex items-center space-x-1 overflow-x-auto pb-2';
+
+                this.ganttChart.forEach((segment, index) => {
+                    const width = ((segment.endTime - segment.startTime) / maxTime) * 100;
+                    const processNum = parseInt(segment.processId.substring(1)) - 1;
+                    const color = colors[processNum % colors.length];
+
+                    const segmentDiv = document.createElement('div');
+                    segmentDiv.className = 'gantt-process flex-shrink-0 rounded px-2 py-3 text-white text-sm font-medium text-center cursor-pointer';
+                    segmentDiv.style.backgroundColor = color;
+                    segmentDiv.style.minWidth = `${Math.max(width, 8)}%`;
+                    segmentDiv.innerHTML = `
+                        <div>${segment.processId}</div>
+                        <div class="text-xs opacity-75">${segment.startTime}-${segment.endTime}</div>
+                    `;
+                    segmentDiv.title = `${segment.processId}: ${segment.startTime} - ${segment.endTime}`;
+
+                    ganttDiv.appendChild(segmentDiv);
+                });
+
+                container.appendChild(ganttDiv);
+
+                // Add time scale
+                const timeScale = document.createElement('div');
+                timeScale.className = 'flex justify-between text-xs text-gray-500 mt-2 px-1';
+                for (let i = 0; i <= maxTime; i += Math.max(1, Math.floor(maxTime / 10))) {
+                    const timeLabel = document.createElement('span');
+                    timeLabel.textContent = i;
+                    timeScale.appendChild(timeLabel);
+                }
+                container.appendChild(timeScale);
+            }
+
+            displayProcessTable() {
+                const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = '';
+
+                this.results.forEach(process => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    row.innerHTML = `
+                        <td class="border border-gray-300 px-4 py-2 font-medium">${process.id}</td>
+                        <td class="border border-gray-300 px-4 py-2">${process.arrivalTime}</td>
+                        <td class="border border-gray-300 px-4 py-2">${process.burstTime}</td>
+                        <td class="border border-gray-300 px-4 py-2">${process.completionTime}</td>
+                        <td class="border border-gray-300 px-4 py-2">${process.turnaroundTime}</td>
+                        <td class="border border-gray-300 px-4 py-2">${process.responseTime}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            displayAverageMetrics() {
+                const avgTurnaround = this.results.reduce((sum, p) => sum + p.turnaroundTime, 0) / this.results.length;
+                const avgWaiting = this.results.reduce((sum, p) => sum + p.waitingTime, 0) / this.results.length;
+                const avgResponse = this.results.reduce((sum, p) => sum + p.responseTime, 0) / this.results.length;
+
+                document.getElementById('avgTurnaround').textContent = avgTurnaround.toFixed(2);
+                document.getElementById('avgWaiting').textContent = avgWaiting.toFixed(2);
+                document.getElementById('avgResponse').textContent = avgResponse.toFixed(2);
+                document.getElementById('averageMetrics').classList.remove('hidden');
+            }
+        }
+
+        // Initialize the scheduler when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new CPUScheduler();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9628d445b163e2f1',t:'MTc1MzA4MTMwOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
